@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Prédiction ONNX - valeur fixée</title>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.29.0/dist/ort.min.js"></script>
+</head>
+<body>
+  <h1>Prédiction avec une valeur fixée dans le code</h1>
+  <p id="result">Chargement du modèle...</p>
+
+  <script>
+    // Maison dont on veut prédire le prix (valeur fixée dans le code)
+    const house = { size: 100, nb_rooms: 3, garden: 1 };
+
+    async function main() {
+      const result = document.getElementById("result");
+      try {
+        ort.env.wasm.numThreads = 1;
+
+        // 1. Chargement du modèle
+        const session = await ort.InferenceSession.create("model.onnx", {
+          executionProviders: ["wasm"],
+        });
+        console.log("Entrées :", session.inputNames, "Sorties :", session.outputNames);
+
+        // 2. Préparation de l'entrée : 1 maison, 3 features, en float32
+        const values = Float32Array.from([house.size, house.nb_rooms, house.garden]);
+        const input = new ort.Tensor("float32", values, [1, 3]);
+
+        // 3. Inférence
+        const outputs = await session.run({ [session.inputNames[0]]: input });
+        const price = outputs[session.outputNames[0]].data[0];
+
+        console.log("Prédiction brute :", price);
+        result.textContent =
+          `Maison ${JSON.stringify(house)} : prix estimé ${Math.round(price).toLocaleString("fr-FR")} €`;
+      } catch (error) {
+        console.error(error);
+        result.textContent = "Erreur : " + error.message;
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
