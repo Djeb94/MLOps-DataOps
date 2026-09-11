@@ -42,7 +42,6 @@ def predict():
     return r.json()
 
 
-# 0. Point de départ connu : current = next = version 1
 print("--- Préparation : current = next = version 1")
 code, body = update(1)
 check("POST /update-model version 1 répond 200", code == 200, str(body))
@@ -52,13 +51,11 @@ h = health()
 p = h["canary_p"]
 check("current et next valent tous les deux 1", h["current_version"] == "1" and h["next_version"] == "1", str(h))
 
-# 1. Tant que current = next, toutes les prédictions sont identiques
 print("--- Étape 1 : current = next")
 results = [predict() for _ in range(20)]
 check("20 prédictions faites avec la version 1", all(r["model_version"] == "1" for r in results))
 check("les 20 prédictions sont identiques", len({r["y_pred"] for r in results}) == 1)
 
-# 2. /update-model ne modifie que next
 print("--- Étape 2 : chargement du candidat dans next")
 code, body = update(2)
 check("POST /update-model version 2 répond 200", code == 200, str(body))
@@ -66,7 +63,6 @@ h = health()
 check("current reste en version 1", h["current_version"] == "1", str(h))
 check("next passe en version 2", h["next_version"] == "2")
 
-# 3. Répartition du trafic entre current et next
 print(f"--- Étape 3 : envoi de {N_REQUESTS} requêtes (p = {p})")
 results = [predict() for _ in range(N_REQUESTS)]
 current_hits = [r for r in results if r["model_role"] == "current"]
@@ -88,13 +84,11 @@ if current_hits and next_hits:
     check("current et next donnent des prédictions différentes", v1_pred != v2_pred,
           f"v1 = {v1_pred:,.0f} / v2 = {v2_pred:,.0f}")
 
-# 4. Une version inexistante ne casse pas next
 print("--- Étape 4 : version inexistante")
 code, body = update(9999)
 check("POST /update-model version 9999 répond 404", code == 404, str(body))
 check("next reste en version 2", health()["next_version"] == "2")
 
-# 5. Promotion du candidat
 print("--- Étape 5 : promotion de next en current")
 code, body = accept()
 check("POST /accept-next-model répond 200", code == 200, str(body))

@@ -26,7 +26,6 @@ if not 0 <= CANARY_P <= 1:
 mlflow.set_tracking_uri(TRACKING_URI)
 client = MlflowClient()
 
-# Chaque emplacement contient {"model": <modèle pyfunc>, "version": "2"}
 state = {"current": None, "next": None}
 lock = threading.Lock()
 

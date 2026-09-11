@@ -22,14 +22,12 @@ def json_or_empty(response):
         return {}
 
 
-# 1. Le service répond et les deux modèles sont chargés
 r = requests.get(f"{BASE_URL}/health", timeout=TIMEOUT)
 health = json_or_empty(r)
 check("GET /health répond 200", r.status_code == 200, str(health))
 check("les modèles current et next sont chargés",
       health.get("current_version") is not None and health.get("next_version") is not None)
 
-# 2. Prédiction valide
 house = {"size": 100, "nb_rooms": 3, "garden": 1}
 r = requests.post(f"{BASE_URL}/predict", json=house, timeout=TIMEOUT)
 body = json_or_empty(r)
@@ -40,14 +38,12 @@ expected_version = health.get(f"{body.get('model_role')}_version")
 check("model_version correspond au rôle indiqué", body.get("model_version") == expected_version,
       f"{body.get('model_role')} -> version {body.get('model_version')}")
 
-# 3. Déterminisme : vérifiable seulement si current et next sont le même modèle
 if health.get("current_version") == health.get("next_version"):
     r = requests.post(f"{BASE_URL}/predict", json=house, timeout=TIMEOUT)
     check("la prédiction est déterministe", json_or_empty(r).get("y_pred") == body.get("y_pred"))
 else:
     print("[INFO ] déterminisme non vérifié : current et next sont des versions différentes")
 
-# 4. Les entrées invalides sont refusées
 invalid_cases = {
     "garden hors de [0, 1]": {**house, "garden": 5},
     "size négative": {**house, "size": -10},
